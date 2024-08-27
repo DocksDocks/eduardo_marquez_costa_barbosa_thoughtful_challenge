@@ -1,32 +1,14 @@
-# tasks.py
+from ExtendedSelenium import ExtendedSelenium
 
-from news_scraper import NewsScraper
-from RPA.Robocorp.WorkItems import WorkItems
-import logging
-
-logging.basicConfig(level=logging.INFO)
-
-def process_news():
-    logging.info("Starting news scraping process")
-    work_items = WorkItems()
-    work_items.get_input_work_item()
-
-    search_phrase = work_items.get_work_item_variable("search_phrase")
-    category = work_items.get_work_item_variable("category")
-    months = int(work_items.get_work_item_variable("months", 0))
-
-    scraper = NewsScraper()
+def capture_screenshot():
+    browser = ExtendedSelenium()
     try:
-        articles = scraper.search_news(search_phrase, category)
-        filtered_articles = scraper.filter_articles_by_date(articles, months)
-        articles_data = [scraper.extract_article_info(article) for article in filtered_articles]
-
-        scraper.save_to_excel(articles_data, search_phrase)
-        logging.info("Completed news scraping process")
-
-        work_items.complete_work_item()
+        browser.open_site("https://apnews.com/")
+        browser.close_popup_if_present()  # Close the popup if it appears
+        browser.click_search_button()  # Click the search button after closing the popup
+        browser.capture_page_screenshot("output/final_page_screenshot.png")
     finally:
-        scraper.close()
+        browser.quit_driver()
 
 if __name__ == "__main__":
-    process_news()
+    capture_screenshot()
