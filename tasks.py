@@ -1,14 +1,16 @@
+# tasks.py
 from ExtendedSelenium import ExtendedSelenium
 
-def capture_screenshot():
+def the_process():
     browser = ExtendedSelenium()
     try:
         browser.open_site("https://apnews.com/")
         browser.close_popup_if_present()  # Close the popup if it appears
         browser.click_search_button()  # Click the search button after closing the popup
-        browser.capture_page_screenshot("output/final_page_screenshot.png")
+        browser.type_and_submit_search_query("COVID")  # Type "COVID" into the search input
+        browser.click_and_select_category()  # Click and select the "Stories" category
     finally:
         browser.quit_driver()
 
 if __name__ == "__main__":
-    capture_screenshot()
+    the_process()
