@@ -92,13 +92,13 @@ class ExtendedSelenium(Selenium):
             print("Category dropdown clicked")
             time.sleep(1)  # Allow time for the dropdown to expand
 
-            # Scroll the "Stories" checkbox into view and select it
-            self.wait_until_element_is_visible('xpath://label/span[text()="Stories"]', timeout=10)
-            stories_checkbox = self.get_webelement('xpath://label/span[text()="Stories"]/../input')
+            # Select the "Stories" checkbox based on the input's value attribute
+            self.wait_until_element_is_visible('css:input[value="00000188-f942-d221-a78c-f9570e360000"]', timeout=10)
+            stories_checkbox = self.get_webelement('css:input[value="00000188-f942-d221-a78c-f9570e360000"]')
             self.scroll_element_into_view(stories_checkbox)
             self.close_popup_if_present()  # Ensure no popup is blocking
-            self.execute_javascript("arguments[0].click();", stories_checkbox)
-            print("Stories category selected")
+            self.click_element(stories_checkbox)  # Click the checkbox directly
+            print("Stories category checkbox selected")
 
             # Wait for the page to reload
             time.sleep(5)
@@ -116,9 +116,6 @@ class ExtendedSelenium(Selenium):
 
         except Exception as e:
             print(f"Failed to click and select category: {e}")
-
-
-
 
     @keyword
     def print_webdriver_log(self, logtype):
