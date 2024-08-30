@@ -113,9 +113,40 @@ class ExtendedSelenium(Selenium):
 
             # Take a screenshot after the category has been selected
             self.capture_page_screenshot("output/process/step_3-2_category-selected.png")
-
         except Exception as e:
             print(f"Failed to click and select category: {e}")
+
+    @keyword
+    def select_sort_by_newest(self):
+        try:
+            # Scroll the "Sort by" dropdown into view and click it
+            self.wait_until_element_is_visible('css:select[name="s"]', timeout=10)
+            sort_by_dropdown = self.get_webelement('css:select[name="s"]')
+            self.scroll_element_into_view(sort_by_dropdown)
+            self.close_popup_if_present()  # Ensure no popup is blocking
+            self.select_from_list_by_value(sort_by_dropdown, "3")  # Select "Newest" option
+            print("Selected 'Newest' in Sort by dropdown")
+            # Wait for the page to reload and URL to change
+            time.sleep(5)
+            # Check if the URL contains "s=3" to confirm the sorting change
+            current_url = self.driver.current_url
+            if "s=3" in current_url:
+                print("Successfully sorted by 'Newest'")
+                # Close any popups that might have appeared after the reload
+                self.close_popup_if_present()
+                # Take a screenshot after selecting "Newest"
+                self.capture_page_screenshot("output/process/step_4_sort_by_newest.png")
+            else:
+                # If the URL did not change, refresh the page and try again
+                print("Failed to change sorting to 'Newest', refreshing the page...")
+                self.driver.refresh()
+                time.sleep(5)
+                self.select_sort_by_newest()  # Retry selecting "Newest"
+
+
+
+        except Exception as e:
+            print(f"Failed to select 'Newest' in Sort by dropdown: {e}")
 
     @keyword
     def print_webdriver_log(self, logtype):
