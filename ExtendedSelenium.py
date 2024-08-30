@@ -4,6 +4,9 @@ from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.options import Options
 from SeleniumLibrary.base import keyword
+from RPA.Excel.Files import Files
+import re
+import os
 import time
 
 class ExtendedSelenium(Selenium):
@@ -142,11 +145,107 @@ class ExtendedSelenium(Selenium):
                 self.driver.refresh()
                 time.sleep(5)
                 self.select_sort_by_newest()  # Retry selecting "Newest"
-
-
-
         except Exception as e:
             print(f"Failed to select 'Newest' in Sort by dropdown: {e}")
+
+
+    @keyword
+    def extract_news_data_and_store(self):
+        try:
+            # Initialize Excel file
+            excel = Files()
+            output_path = "output/process/data/news_data.xlsx"
+            excel.create_workbook(output_path)
+            excel.append_rows_to_worksheet([
+                ["Title", "Date", "Description", "Image Filename", "Search Phrases Count", "Contains Money"]
+            ], header=True)
+
+            # Locate all news articles on the page
+            articles = self.get_webelements('css:.PageList-items-item')
+
+            data = []
+            for i, article in enumerate(articles):
+                # Scroll to the article to ensure it's loaded
+                self.scroll_element_into_view(article)
+                time.sleep(1)  # Allow time for the element to load properly
+
+                # Extract title
+                try:
+                    title_element = article.find_element("css selector", ".PagePromo-title span")
+                    title = title_element.text if title_element else "N/A"
+                except Exception as e:
+                    title = "N/A"
+                    print(f"Failed to extract title: {e}")
+
+                # Extract description
+                try:
+                    description_element = article.find_element("css selector", ".PagePromo-description span")
+                    description = description_element.text if description_element else "N/A"
+                except Exception as e:
+                    description = "N/A"
+                    print(f"Failed to extract description: {e}")
+
+                # Extract date
+                try:
+                    date_element = article.find_element("css selector", ".PagePromo-date span")
+                    date = date_element.text if date_element else "N/A"
+                except Exception as e:
+                    date = "N/A"
+                    print(f"Failed to extract date: {e}")
+
+                # Extract and save the image
+                try:
+                    img_element = article.find_element("css selector", ".PagePromo-media img")
+                    img_filename = self.save_image_from_element(img_element, title) if img_element else "N/A"
+                except Exception as e:
+                    img_filename = "N/A"
+                    print(f"Failed to extract image: {e}")
+
+                # Count occurrences of search phrases
+                search_phrases_count = self.count_search_phrases(title, description, ["COVID"])
+
+                # Check for monetary values in title and description
+                contains_money = self.check_money_in_text(title + " " + description)
+
+                # Append data for this article
+                data.append([title, date, description, img_filename, search_phrases_count, contains_money])
+
+                # Scroll a bit further down for the next article
+                if i < len(articles) - 1:
+                    next_article = articles[i + 1]
+                    self.scroll_element_into_view(next_article)
+                    time.sleep(1)
+
+            # Write data to the Excel sheet
+            excel.append_rows_to_worksheet(data, header=False)
+            excel.save_workbook(output_path)
+            excel.close_workbook()
+            print(f"Data extracted and stored in {output_path}")
+
+        except Exception as e:
+            print(f"Failed to extract news data and store in Excel: {e}")
+
+
+    @keyword
+    def save_image_from_element(self, img_element, title):
+        filename = f"{title[:50]}.png"  # Limit the filename to 50 characters
+        filepath = os.path.join("output/process/data/images", filename)
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        img_element.screenshot(filepath)
+        return filename
+
+    @keyword
+    def count_search_phrases(self, title, description, phrases):
+        count = 0
+        for phrase in phrases:
+            count += title.lower().count(phrase.lower())
+            count += description.lower().count(phrase.lower())
+        return count
+
+    @keyword
+    def check_money_in_text(self, text):
+        money_pattern = r'\$\d+(?:,\d{3})*(?:\.\d{2})?|(?:\d+\s(?:dollars|USD))'
+        return bool(re.search(money_pattern, text, re.IGNORECASE))
 
     @keyword
     def print_webdriver_log(self, logtype):
