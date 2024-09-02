@@ -84,11 +84,12 @@ class ExtendedSelenium(Selenium):
             logging.error(f"Failed to type and submit search query '{query}': {e}")
 
     @keyword
-    def click_and_select_category(self):
+    def click_and_select_category(self, category_name):
         try:
+            # Step 3-1: Interact with the category filter dropdown
             self.wait_until_element_is_visible('css:.SearchFilter-heading', timeout=10)
             self.scroll_element_into_view('css:.SearchFilter-heading')
-            if not self.is_element_visible('css:bsp-toggler[data-toggle-in="search-filter"]'): # when visible it means dropdown is not open
+            if not self.is_element_visible('css:bsp-toggler[data-toggle-in="search-filter"]'):  # Dropdown is not open
                 logging.info("Dropdown is already open, skipping it.")
             else:
                 self.close_popup_if_present()
@@ -99,22 +100,39 @@ class ExtendedSelenium(Selenium):
                 except Exception as e:
                     logging.error(f"Failed to click category: {e}")
                     return
+            # Step 3-2: Click "See All" if it hasn't been clicked already
+            if not self.is_element_visible('css:bsp-toggler[data-toggle-in="see-all"]'):  # See All is not clicked
+                try:
+                    self.wait_until_element_is_visible('css:.SearchFilter-seeAll-button', timeout=10)
+                    see_all_button = self.get_webelement('css:.SearchFilter-seeAll-button')
+                    self.scroll_element_into_view(see_all_button)
+                    self.close_popup_if_present()
+                    self.click_element(see_all_button)
+                    logging.info('"See All" button clicked')
+                    self.capture_page_screenshot("output/process/screenshots/step_3-2_see_all_clicked.png")
+                except Exception as e:
+                    logging.error(f"Failed to click 'See All': {e}")
+                    return
+            else:
+                logging.info('"See All" already clicked, skipping.')
+            # Step 3-3: Select the desired category
             try:
-                self.wait_until_element_is_visible('css:input[value="00000188-f942-d221-a78c-f9570e360000"]', timeout=10)
-                stories_checkbox = self.get_webelement('css:input[value="00000188-f942-d221-a78c-f9570e360000"]')
-                self.scroll_element_into_view(stories_checkbox)
+                category_value = self.get_category_value(category_name)
+                category_checkbox = self.get_webelement(f'css:input[value="{category_value}"]')
+                self.scroll_element_into_view(category_checkbox)
                 self.close_popup_if_present()
-                self.click_element(stories_checkbox)
-                logging.info("Stories category checkbox selected")
+                self.click_element(category_checkbox)
+                logging.info(f"{category_name} category checkbox selected")
                 time.sleep(3)
                 self.close_popup_if_present()
                 self.scroll_element_into_view('css:.SearchFilter-heading')
                 logging.info("Scrolled to dropdown")
-                self.capture_page_screenshot("output/process/screenshots/step_3-2_category-selected.png")
+                self.capture_page_screenshot(f"output/process/screenshots/step_3-3_{category_name}_selected.png")
             except Exception as e:
                 logging.error(f"Failed to select category: {e}")
         except Exception as e:
             logging.error(f"Failed to interact with category filter: {e}")
+
 
     @keyword
     def select_sort_by_newest(self):
@@ -235,6 +253,17 @@ class ExtendedSelenium(Selenium):
         logs = self.driver.get_log(logtype)
         for entry in logs:
             logging.info(entry)
+
+    def get_category_value(self, category_name):
+        category_mapping = {
+            "Live Blogs": "00000190-0dc5-d7b0-a1fa-dde7ec030000",
+            "Sections": "00000189-9323-dce2-ad8f-bbe74c770000",
+            "Stories": "00000188-f942-d221-a78c-f9570e360000",
+            "Subsections": "00000189-9323-db0a-a7f9-9b7fb64a0000",
+            "Videos": "00000188-d597-dc35-ab8d-d7bf1ce10000",
+        }
+        return category_mapping.get(category_name, "00000188-f942-d221-a78c-f9570e360000")  # Default to Stories
+
 
     @keyword
     def quit_driver(self):
