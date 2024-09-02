@@ -18,7 +18,7 @@ class ExtendedSelenium(Selenium):
         self.service = ChromeService(ChromeDriverManager().install())
         self.options = self.create_options(headless)
 
-    def create_options(self, headless):
+    def create_options(self, headless=False):
         options = Options()
         if headless:
             options.add_argument("--headless")
@@ -47,7 +47,7 @@ class ExtendedSelenium(Selenium):
     def close_popup_if_present(self):
         try:
             time.sleep(1)  # Allow time for the popup to show
-
+            logging.info("Attempting to close possible popups.")
             # Attempt to close any generic "Close" button first
             if self.is_element_visible('id:Close'):
                 self.click_element('id:Close')
@@ -57,13 +57,11 @@ class ExtendedSelenium(Selenium):
             if self.is_element_visible('xpath://a[@onclick="closeLightbox()"]'):
                 self.click_element('xpath://a[@onclick="closeLightbox()"]')
                 logging.info("Initial popup closed")
-
             # Close any other fancybox overlays if present
             if self.is_element_visible('css:div.fancybox-overlay-fixed'):
                 if self.is_element_visible('css:a.fancybox-close'):
                     self.click_element('css:a.fancybox-close')
                     logging.info("Fancybox overlay closed")
-
             # Close any other buttons with aria-label="Close"
             if self.is_element_visible('css:button[aria-label="Close"]'):
                 self.click_element('css:button[aria-label="Close"]')
@@ -78,6 +76,7 @@ class ExtendedSelenium(Selenium):
         try:
             time.sleep(5)  # Wait for the page to load
             self.close_popup_if_present()
+            self.capture_page_screenshot("output/screenshots/step_1-1_search-pre_click_search_button.png")
             self.wait_until_element_is_visible(
                 'css:.SearchOverlay-search-button', timeout=10)
             self.click_element('css:.SearchOverlay-search-button')
@@ -88,7 +87,7 @@ class ExtendedSelenium(Selenium):
         finally:
             self.close_popup_if_present()
             self.capture_page_screenshot(
-                "output/process/screenshots/step_1_search-click_button.png")
+                "output/process/screenshots/step_1-2_search-click_button.png")
 
     @keyword
     def type_and_submit_search_query(self, query):
