@@ -30,19 +30,17 @@ class ExtendedSelenium(Selenium):
         options.add_experimental_option("excludeSwitches", ["disable-popup-blocking"])
         options.add_experimental_option("prefs", { "profile.default_content_setting_values.notifications": 2})
         options.add_argument("--start-maximized")
-        options.add_argument("--window-size=1920,1080")
-        options.add_argument(
-            "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
         return options
 
     @keyword
     def open_site(self, url, wait_time=10):
         logging.info(f"Opening url= {url}")
         time.sleep(wait_time)  # Wait to ensure any initial popups appear
-        self.create_webdriver(driver_name="Chrome",
-                              service=self.service, options=self.options)
+        self.create_webdriver(driver_name="Chrome", service=self.service, options=self.options)
         self.driver.get(url)
+        self.capture_page_screenshot("output/screenshots/step_0-1_opened_site.png")  # Capture the screenshot here
         time.sleep(2)  # Short wait for the page to load
+
 
     @keyword
     def close_popup_if_present(self):
@@ -78,8 +76,9 @@ class ExtendedSelenium(Selenium):
             time.sleep(5)  # Wait for the page to load
             self.close_popup_if_present()
             self.capture_page_screenshot("output/screenshots/step_1-1_search-pre_click_search_button.png")
+            logging.debug("Trying to find search button...")
             self.wait_until_element_is_visible(
-                'css:.SearchOverlay-search-button', timeout=10)
+                'css:.SearchOverlay-search-button', timeout=20)
             self.click_element('css:.SearchOverlay-search-button')
             logging.info("Search button clicked")
             time.sleep(1)
