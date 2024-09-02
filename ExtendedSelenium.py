@@ -13,7 +13,7 @@ import logging
 
 class ExtendedSelenium(Selenium):
 
-    def __init__(self, headless=False, *args, **kwargs):
+    def __init__(self, headless=True, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.service = ChromeService(ChromeDriverManager().install())
         self.options = self.create_options(headless)
