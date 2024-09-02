@@ -8,27 +8,30 @@ from RPA.Excel.Files import Files
 import re
 import os
 import time
+import logging
 
 class ExtendedSelenium(Selenium):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, headless=True, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.service = ChromeService(ChromeDriverManager().install())
-        self.options = self.create_options()
+        self.options = self.create_options(headless)
 
-    def create_options(self):
+    def create_options(self, headless):
         options = Options()
-        options.add_argument("--headless")
+        if headless:
+            options.add_argument("--headless")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--disable-gpu")
         options.add_argument("--start-maximized")
         options.add_argument("--window-size=1920,1080")
+        # options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
         return options
 
     @keyword
-    def open_site(self, url):
-        time.sleep(10)  # Wait 10 seconds before starting to ensure the popup appears
+    def open_site(self, url, wait_time=10):
+        time.sleep(wait_time)  # Wait to ensure any initial popups appear
         self.create_webdriver(driver_name="Chrome", service=self.service, options=self.options)
         self.driver.get(url)
         time.sleep(2)  # Short wait for the page to load
@@ -37,126 +40,109 @@ class ExtendedSelenium(Selenium):
     def close_popup_if_present(self):
         try:
             time.sleep(1)  # Allow time for the popup to show
-            # Check and close the first popup (like the AP's "Support" popup)
             if self.is_element_visible('xpath://a[@onclick="closeLightbox()"]'):
                 self.click_element('xpath://a[@onclick="closeLightbox()"]')
-                print("Initial popup closed")
-            # Check and close the fancybox overlay (specific to "Support The Associated Press")
+                logging.info("Initial popup closed")
             if self.is_element_visible('css:div.fancybox-overlay-fixed'):
-                # Locate and click the close button on the fancybox overlay
                 if self.is_element_visible('css:a.fancybox-close'):
                     self.click_element('css:a.fancybox-close')
-                    print("Fancybox overlay closed")
-            # Check and close any additional popups that may appear later
+                    logging.info("Fancybox overlay closed")
             if self.is_element_visible('css:button[aria-label="Close"]'):
                 self.click_element('css:button[aria-label="Close"]')
-                print("Additional popup closed")
+                logging.info("Additional popup closed")
         except Exception as e:
-            print(f"Popup not found or already closed: {e}")
+            logging.error(f"Failed to close popup: {e}")
 
     @keyword
     def click_search_button(self):
         try:
-            time.sleep(5) # wait page to load
-            self.close_popup_if_present()  # Close any popup before clicking
+            time.sleep(5)  # Wait for the page to load
+            self.close_popup_if_present()
             self.wait_until_element_is_visible('css:.SearchOverlay-search-button', timeout=10)
             self.click_element('css:.SearchOverlay-search-button')
-            print("Search button clicked")
-            time.sleep(1)  # Allow time for the search overlay to open
+            logging.info("Search button clicked")
+            time.sleep(1)
         except Exception as e:
-            print("Search button not found or couldn't be clicked.")
+            logging.error("Search button not found or couldn't be clicked.")
         finally:
-            self.close_popup_if_present()  # Ensure no popup is blocking the screenshot
+            self.close_popup_if_present()
             self.capture_page_screenshot("output/process/screenshots/step_1_search-click_button.png")
 
     @keyword
     def type_and_submit_search_query(self, query):
         try:
-            self.close_popup_if_present()  # Close any popup before typing
+            self.close_popup_if_present()
             self.wait_until_element_is_visible('css:input.SearchOverlay-search-input', timeout=10)
             self.input_text('css:input.SearchOverlay-search-input', query)
-            print(f"Typed '{query}' into the search input.")
-            self.close_popup_if_present()  # Ensure no popup is blocking the screenshot
+            logging.info(f"Typed '{query}' into the search input.")
             self.capture_page_screenshot("output/process/screenshots/step_2-1_search-typed_query.png")
             self.press_keys('css:input.SearchOverlay-search-input', 'ENTER')
-            print(f"Submitted '{query}' to the search input.")
+            logging.info(f"Submitted '{query}' to the search input.")
             self.wait_until_element_is_visible('css:.SearchResultsModule', timeout=10)
-            self.close_popup_if_present()  # Ensure no popup is blocking the screenshot
             self.capture_page_screenshot("output/process/screenshots/step_2-2_search-after_submit.png")
         except Exception as e:
-            print(f"Failed to type and submit search query '{query}': {e}")
+            logging.error(f"Failed to type and submit search query '{query}': {e}")
 
     @keyword
     def click_and_select_category(self):
         try:
-            # Wait until the category filter is visible
             self.wait_until_element_is_visible('css:.SearchFilter-heading', timeout=10)
             self.scroll_element_into_view('css:.SearchFilter-heading')
-            # Check if the dropdown is already open
-            if not self.is_element_visible('css:bsp-toggler[data-toggle-in="search-filter"]'):
-                print("Dropdown is already open, skipping it.")
+            if not self.is_element_visible('css:bsp-toggler[data-toggle-in="search-filter"]'): # when visible it means dropdown is not open
+                logging.info("Dropdown is already open, skipping it.")
             else:
-                # Attempt to close any overlay that might block the click
-                self.close_popup_if_present()  # Ensure no popup is blocking
+                self.close_popup_if_present()
                 try:
                     self.click_element('css:.SearchFilter-heading')
-                    print("Category dropdown clicked")
+                    logging.info("Category dropdown clicked")
                     self.capture_page_screenshot("output/process/screenshots/step_3-1_category-clicked.png")
                 except Exception as e:
-                    print(f"Failed to click category: {e}")
+                    logging.error(f"Failed to click category: {e}")
                     return
             try:
-                # Wait for the checkbox to be visible
                 self.wait_until_element_is_visible('css:input[value="00000188-f942-d221-a78c-f9570e360000"]', timeout=10)
                 stories_checkbox = self.get_webelement('css:input[value="00000188-f942-d221-a78c-f9570e360000"]')
                 self.scroll_element_into_view(stories_checkbox)
-                self.close_popup_if_present()  # Ensure no popup is blocking
-                self.click_element(stories_checkbox)  # Click the checkbox directly
-                print("Stories category checkbox selected")
-                time.sleep(3)  # Wait for the page to load
+                self.close_popup_if_present()
+                self.click_element(stories_checkbox)
+                logging.info("Stories category checkbox selected")
+                time.sleep(3)
                 self.close_popup_if_present()
                 self.scroll_element_into_view('css:.SearchFilter-heading')
-                print("Scrolled to dropdown")
+                logging.info("Scrolled to dropdown")
                 self.capture_page_screenshot("output/process/screenshots/step_3-2_category-selected.png")
             except Exception as e:
-                print(f"Failed to select category: {e}")
+                logging.error(f"Failed to select category: {e}")
         except Exception as e:
-            print(f"Failed to interact with category filter: {e}")
+            logging.error(f"Failed to interact with category filter: {e}")
 
     @keyword
     def select_sort_by_newest(self):
         try:
-            # Scroll the "Sort by" dropdown into view and click it
             self.wait_until_element_is_visible('css:select[name="s"]', timeout=10)
             sort_by_dropdown = self.get_webelement('css:select[name="s"]')
             self.scroll_element_into_view(sort_by_dropdown)
-            self.close_popup_if_present()  # Ensure no popup is blocking
-            self.select_from_list_by_value(sort_by_dropdown, "3")  # Select "Newest" option
-            print("Selected 'Newest' in Sort by dropdown")
-            # Wait for the page to reload and URL to change
+            self.close_popup_if_present()
+            self.select_from_list_by_value(sort_by_dropdown, "3")
+            logging.info("Selected 'Newest' in Sort by dropdown")
             time.sleep(5)
-            # Check if the URL contains "s=3" to confirm the sorting change
             current_url = self.driver.current_url
             if "s=3" in current_url:
-                print("Successfully sorted by 'Newest'")
-                # Close any popups that might have appeared after the reload
+                logging.info("Successfully sorted by 'Newest'")
                 self.close_popup_if_present()
-                # Take a screenshot after selecting "Newest"
                 self.capture_page_screenshot("output/process/screenshots/step_4_sort_by_newest.png")
             else:
-                # If the URL did not change, refresh the page and try again
-                print("Failed to change sorting to 'Newest', refreshing the page...")
+                logging.warning("Failed to change sorting to 'Newest', refreshing the page...")
                 self.driver.refresh()
                 time.sleep(5)
                 self.close_popup_if_present()
-                self.select_sort_by_newest()  # Retry selecting "Newest"
+                self.select_sort_by_newest()
         except Exception as e:
-            print(f"Failed to select 'Newest' in Sort by dropdown: {e}")
+            logging.error(f"Failed to select 'Newest' in Sort by dropdown: {e}")
 
     @keyword
     def extract_news_data_and_store(self):
         try:
-            # Initialize Excel file
             excel = Files()
             output_path = "output/process/data/news_data.xlsx"
             excel.create_workbook(output_path)
@@ -164,47 +150,40 @@ class ExtendedSelenium(Selenium):
                 ["Title", "Date", "Description", "Image Filename", "Search Phrases Count", "Contains Money"]
             ], header=True)
 
-            # Locate all news articles within the correct container
             articles_container = self.get_webelement('css:.SearchResultsModule-results .PageList-items')
             articles = articles_container.find_elements("css selector", ".PageList-items-item")
 
             data = []
             for i, article in enumerate(articles):
-                # Scroll to the article to ensure it's loaded
                 self.scroll_element_into_view(article)
-                time.sleep(1)  # Allow time for the element to load properly
+                time.sleep(1)
 
-                # Extract title
+                title, description, date, img_filename = "N/A", "N/A", "N/A", "N/A"
                 try:
                     title_element = article.find_element("css selector", ".PagePromo-title span")
                     title = title_element.text if title_element else "N/A"
                 except Exception as e:
-                    title = "N/A"
-                    print(f"Failed to extract title.")
+                    logging.warning("Failed to extract title.")
 
-                # Extract description
                 try:
                     description_element = article.find_element("css selector", ".PagePromo-description span")
                     description = description_element.text if description_element else "N/A"
                 except Exception as e:
-                    description = "N/A"
-                    print(f"Failed to extract description.")
+                    logging.warning("Failed to extract description.")
 
-                # Extract date
                 try:
                     date_element = article.find_element("css selector", ".PagePromo-date span")
                     date = date_element.text if date_element else "N/A"
                 except Exception as e:
-                    date = "N/A"
-                    print(f"Failed to extract date.")
+                    logging.warning("Failed to extract date.")
 
-                # Extract and save the image
                 try:
                     img_element = article.find_element("css selector", ".PagePromo-media img")
                     img_filename = self.save_image_from_element(img_element, title) if img_element else "N/A"
                 except Exception as e:
+
                     img_filename = "N/A"
-                    print(f"Failed to extract image: there is no image.")
+                    logging.warning("Failed to extract image: there is no image.")
 
                 # Count occurrences of search phrases
                 search_phrases_count = self.count_search_phrases(title, description, ["COVID"])
@@ -225,17 +204,21 @@ class ExtendedSelenium(Selenium):
             excel.append_rows_to_worksheet(data, header=False)
             excel.save_workbook(output_path)
             excel.close_workbook()
-            print(f"Data extracted and stored in {output_path}")
+            logging.info(f"Data extracted and stored in {output_path}")
 
         except Exception as e:
-            print(f"Failed to extract news data and store in Excel: {e}")
+            logging.error(f"Failed to extract news data and store in Excel: {e}")
 
     def save_image_from_element(self, img_element, title):
-        filename = f"{title[:50]}.png"  # Limit the filename to 50 characters
-        filepath = os.path.join("output/process/data/images", filename)
-        os.makedirs(os.path.dirname(filepath), exist_ok=True)
-        img_element.screenshot(filepath)
-        return filename
+        try:
+            filename = f"{title[:50]}.png"  # Limit the filename to 50 characters
+            filepath = os.path.join("output/process/data/images", filename)
+            os.makedirs(os.path.dirname(filepath), exist_ok=True)
+            img_element.screenshot(filepath)
+            return filename
+        except Exception as e:
+            logging.error(f"Failed to save image: {e}")
+            return "N/A"
 
     def count_search_phrases(self, title, description, phrases):
         count = 0
@@ -251,7 +234,7 @@ class ExtendedSelenium(Selenium):
     def print_webdriver_log(self, logtype):
         logs = self.driver.get_log(logtype)
         for entry in logs:
-            print(entry)
+            logging.info(entry)
 
     @keyword
     def quit_driver(self):
