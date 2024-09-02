@@ -15,8 +15,8 @@ def the_process():
 
     browser = ExtendedSelenium()
     try:
-        # Perform the browser automation tasks
-        browser.open_site("https://apnews.com/")
+        url = "https://apnews.com/"
+        browser.open_site(url)
         browser.close_popup_if_present()
         browser.click_search_button()
         browser.type_and_submit_search_query(search_phrase)

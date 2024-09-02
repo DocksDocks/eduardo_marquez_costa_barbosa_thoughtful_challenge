@@ -13,12 +13,12 @@ import logging
 
 class ExtendedSelenium(Selenium):
 
-    def __init__(self, headless=True, *args, **kwargs):
+    def __init__(self, headless=False, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.service = ChromeService(ChromeDriverManager().install())
         self.options = self.create_options(headless)
 
-    def create_options(self, headless=False):
+    def create_options(self, headless):
         options = Options()
         if headless:
             options.add_argument("--headless")
@@ -37,6 +37,7 @@ class ExtendedSelenium(Selenium):
 
     @keyword
     def open_site(self, url, wait_time=10):
+        logging.info(f"Opening url= {url}")
         time.sleep(wait_time)  # Wait to ensure any initial popups appear
         self.create_webdriver(driver_name="Chrome",
                               service=self.service, options=self.options)
