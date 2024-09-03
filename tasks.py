@@ -4,8 +4,7 @@ from RPA.Robocorp.WorkItems import WorkItems, State
 from ExtendedSelenium import ExtendedSelenium
 
 load_dotenv()
-logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 def the_process():
