@@ -310,7 +310,7 @@ class ExtendedSelenium(Selenium):
     def save_image_from_element(self, img_element, title):
         try:
             # Limit the filename to 50 characters
-            filename = f"{title[:50]}.png"
+            filename = f"image-{title[:50]}.png"
             filepath = os.path.join("output", filename)
             os.makedirs(os.path.dirname(filepath), exist_ok=True)
             img_element.screenshot(filepath)
