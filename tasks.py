@@ -29,10 +29,7 @@ def the_process():
         browser.select_sort_by_newest()
         browser.extract_news_data_and_store()
         # Save a screenshot as proof of successful operations
-        final_path="step_5_final_screenshot.png"
-        browser.screenshot(filename=final_path)
-        work_item.add_work_item_file(path=final_path)
-        work_item.save_work_item()
+        browser.save_screenshot_to_work_item(filename="output/step_5_final_screenshot.png")
         # Mark the work item as completed
         work_item.release_input_work_item(State.DONE)
     except Exception as e:

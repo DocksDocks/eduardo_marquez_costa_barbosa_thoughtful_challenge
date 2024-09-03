@@ -19,7 +19,7 @@ class ExtendedSelenium(Selenium):
         self.options = self.create_options(headless)
         self.work_item = work_item
 
-
+    @keyword
     def save_screenshot_to_work_item(self, filename):
         try:
             self.screenshot(filename=filename)
