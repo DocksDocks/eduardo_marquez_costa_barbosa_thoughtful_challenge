@@ -62,7 +62,7 @@ class ExtendedSelenium(Selenium):
     @keyword
     def open_site(self, url, wait_time=10):
         logging.info(f"Opening url= {url}")
-        self.open_chrome_browser(url, options=self.options)
+        self.open_chrome_browser(url)
         time.sleep(wait_time)  # Wait to ensure any initial popups appear
         self.create_webdriver(driver_name="Chrome",
                               service=self.service, options=self.options)
