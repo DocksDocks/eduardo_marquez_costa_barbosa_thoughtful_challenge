@@ -194,8 +194,7 @@ class ExtendedSelenium(Selenium):
             Exception: If the category dropdown cannot be clicked or the category cannot be selected.
         """
         try:
-            self.wait_until_element_is_visible(
-                'css:.SearchFilter-heading', timeout=10)
+            self.wait_until_element_is_visible('css:.SearchFilter-heading', timeout=10)
             self.scroll_element_into_view('css:.SearchFilter-heading')
             if not self.is_element_visible('css:bsp-toggler[data-toggle-in="search-filter"]'):
                 logging.info("Dropdown is already open, skipping it.")
@@ -204,25 +203,22 @@ class ExtendedSelenium(Selenium):
                 try:
                     self.click_element_with_retry('css:.SearchFilter-heading')
                     logging.info("Category dropdown clicked")
-                    self.save_screenshot_to_work_item(
-                        filename="output/step_3-1_category-clicked.png")
+                    self.save_screenshot_to_work_item(filename="output/step_3-1_category-clicked.png")
                 except Exception as e:
                     logging.error(f"Failed to click category: {e}")
                     return
+
             # Step 3-2: Click "See All" if it hasn't been clicked already
             if not self.is_element_visible('css:bsp-toggler[data-toggle-in="see-all"]'):
                 try:
-                    self.wait_until_element_is_visible(
-                        'css:.SearchFilter-seeAll-button', timeout=10)
-                    see_all_button = self.get_webelement(
-                        'css:.SearchFilter-seeAll-button')
+                    self.wait_until_element_is_visible('css:.SearchFilter-seeAll-button', timeout=10)
+                    see_all_button = self.get_webelement('css:.SearchFilter-seeAll-button')
                     self.scroll_element_into_view(see_all_button)
                     self.wait_until_element_is_interactable(see_all_button, timeout=10)
                     self.close_all_popups()
                     self.click_element_with_retry(see_all_button)
                     logging.info('"See All" button clicked')
-                    self.save_screenshot_to_work_item(
-                        filename="output/step_3-2_see_all_clicked.png")
+                    self.save_screenshot_to_work_item(filename="output/step_3-2_see_all_clicked.png")
                 except Exception as e:
                     logging.error(f"Failed to click 'See All': {e}")
                     return
@@ -232,9 +228,9 @@ class ExtendedSelenium(Selenium):
             # Step 3-3: Select the desired category
             for attempt in range(3):  # Retry up to 3 times to handle potential staleness
                 try:
+                    # Re-fetch the element each time to avoid stale element issues
                     category_value = self.get_category_value(category_name)
-                    category_checkbox = self.get_webelement(
-                        f'css:input[value="{category_value}"]')
+                    category_checkbox = self.get_webelement(f'css:input[value="{category_value}"]')
                     self.scroll_element_into_view(category_checkbox)
                     self.wait_until_element_is_visible(category_checkbox, timeout=10)
                     self.close_all_popups()
@@ -242,13 +238,13 @@ class ExtendedSelenium(Selenium):
                     logging.info(f"{category_name} category checkbox selected")
 
                     # Re-fetch the heading element after page updates
+                    self.wait_until_element_is_visible('css:.SearchFilter-heading', timeout=10)
                     heading_element = self.find_element('css:.SearchFilter-heading')
                     self.wait_until_element_is_interactable(heading_element, timeout=10)
                     self.close_all_popups()
                     self.scroll_element_into_view(heading_element)
                     logging.info("Scrolled to dropdown")
-                    self.save_screenshot_to_work_item(
-                        filename=f"output/step_3-3_{category_name}_selected.png")
+                    self.save_screenshot_to_work_item(filename=f"output/step_3-3_{category_name}_selected.png")
                     break  # Exit the loop if successful
                 except Exception as e:
                     logging.error(f"Failed to select category on attempt {attempt + 1}: {e}")
@@ -256,6 +252,7 @@ class ExtendedSelenium(Selenium):
                         raise
         except Exception as e:
             logging.error(f"Failed to interact with category filter: {e}")
+
 
 
 
@@ -270,8 +267,7 @@ class ExtendedSelenium(Selenium):
             Exception: If the dropdown cannot be found or the sorting fails.
         """
         try:
-            self.wait_until_element_is_visible(
-                'css:select[name="s"]', timeout=10)
+            self.wait_until_element_is_visible('css:select[name="s"]', timeout=10)
             sort_by_dropdown = self.get_webelement('css:select[name="s"]')
             self.scroll_element_into_view(sort_by_dropdown)
             self.wait_until_element_is_interactable(sort_by_dropdown, timeout=10)
@@ -285,16 +281,14 @@ class ExtendedSelenium(Selenium):
             if "s=3" in current_url:
                 logging.info("Successfully sorted by 'Newest'")
                 self.close_all_popups()
-                self.save_screenshot_to_work_item(
-                    filename="output/step_4_sort_by_newest.png")
+                self.save_screenshot_to_work_item(filename="output/step_4_sort_by_newest.png")
             else:
-                logging.warning(
-                    "Failed to change sorting to 'Newest', refreshing the page...")
+                logging.warning("Failed to change sorting to 'Newest', refreshing the page...")
                 self.driver.refresh()
-                self.select_sort_by_newest()
+                self.select_sort_by_newest()  # Recursion with refetched elements
         except Exception as e:
-            logging.error(
-                f"Failed to select 'Newest' in Sort by dropdown: {e}")
+            logging.error(f"Failed to select 'Newest' in Sort by dropdown: {e}")
+
 
     @keyword
     def extract_news_data_and_store(self):
