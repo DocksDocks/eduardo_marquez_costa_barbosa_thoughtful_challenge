@@ -13,10 +13,21 @@ import logging
 
 class ExtendedSelenium(Selenium):
 
-    def __init__(self, headless=True, *args, **kwargs):
+    def __init__(self, work_item, headless=True, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.service = ChromeService(ChromeDriverManager().install())
         self.options = self.create_options(headless)
+        self.work_item = work_item
+
+
+    def save_screenshot_to_work_item(self, filename):
+        try:
+            self.screenshot(filename)
+            self.work_item.add_work_item_file(path=filename)
+            self.work_item.save_work_item()
+            logging.info(f"Screenshot saved and added to work item: {filename}")
+        except Exception as e:
+            logging.error(f"Failed to save screenshot to work item: {e}")
 
     def create_options(self, headless):
         options = Options()
@@ -27,20 +38,38 @@ class ExtendedSelenium(Selenium):
         options.add_argument("--disable-gpu")
         options.add_argument("--disable-notifications")
         options.add_argument("--disable-popup-blocking")
-        options.add_experimental_option("excludeSwitches", ["disable-popup-blocking"])
-        options.add_experimental_option("prefs", { "profile.default_content_setting_values.notifications": 2})
+        options.add_argument("--disable-blink-features=AutomationControlled")
+        options.add_experimental_option(
+            "excludeSwitches", ["disable-popup-blocking"])
+        prefs = {
+            "profile.default_content_setting_values.cookies": 2,
+            "profile.block_third_party_cookies": True
+        }
+        options.add_experimental_option("prefs", prefs)
         options.add_argument("--start-maximized")
         return options
 
     @keyword
+    def accept_cookies(self):
+        try:
+            self.wait_until_element_is_visible(
+                'xpath://button[contains(text(), "I Accept")]', timeout=10)
+            self.click_element('xpath://button[contains(text(), "I Accept")]')
+            logging.info("Accepted cookies.")
+        except Exception as e:
+            logging.warning(f"Failed to accept cookies: {e}")
+
+    @keyword
     def open_site(self, url, wait_time=10):
         logging.info(f"Opening url= {url}")
+        self.open_chrome_browser(url, options=self.options)
         time.sleep(wait_time)  # Wait to ensure any initial popups appear
-        self.create_webdriver(driver_name="Chrome", service=self.service, options=self.options)
+        self.create_webdriver(driver_name="Chrome",
+                              service=self.service, options=self.options)
         self.driver.get(url)
-        self.capture_page_screenshot("output/screenshots/step_0-1_opened_site.png")  # Capture the screenshot here
+        # Capture the screenshot here
+        self.save_screenshot_to_work_item(filename="output/screenshots/step_0-1_opened_site.png")
         time.sleep(2)  # Short wait for the page to load
-
 
     @keyword
     def close_popup_if_present(self):
@@ -69,13 +98,13 @@ class ExtendedSelenium(Selenium):
         except Exception as e:
             logging.error(f"Failed to close popup: {e}")
 
-
     @keyword
     def click_search_button(self):
         try:
             time.sleep(5)  # Wait for the page to load
             self.close_popup_if_present()
-            self.capture_page_screenshot("output/screenshots/step_1-1_search-pre_click_search_button.png")
+            self.save_screenshot_to_work_item(
+                filename="output/screenshots/step_1-1_search-pre_click_search_button.png")
             logging.debug("Trying to find search button...")
             self.wait_until_element_is_visible(
                 'css:.SearchOverlay-search-button', timeout=20)
@@ -86,8 +115,8 @@ class ExtendedSelenium(Selenium):
             logging.error("Search button not found or couldn't be clicked.")
         finally:
             self.close_popup_if_present()
-            self.capture_page_screenshot(
-                "output/process/screenshots/step_1-2_search-click_button.png")
+            self.save_screenshot_to_work_item(
+                filename="output/process/screenshots/step_1-2_search-click_button.png")
 
     @keyword
     def type_and_submit_search_query(self, query):
@@ -97,14 +126,14 @@ class ExtendedSelenium(Selenium):
                 'css:input.SearchOverlay-search-input', timeout=10)
             self.input_text('css:input.SearchOverlay-search-input', query)
             logging.info(f"Typed '{query}' into the search input.")
-            self.capture_page_screenshot(
-                "output/process/screenshots/step_2-1_search-typed_query.png")
+            self.save_screenshot_to_work_item(
+                filename="output/process/screenshots/step_2-1_search-typed_query.png")
             self.press_keys('css:input.SearchOverlay-search-input', 'ENTER')
             logging.info(f"Submitted '{query}' to the search input.")
             self.wait_until_element_is_visible(
                 'css:.SearchResultsModule', timeout=10)
-            self.capture_page_screenshot(
-                "output/process/screenshots/step_2-2_search-after_submit.png")
+            self.save_screenshot_to_work_item(
+                filename="output/process/screenshots/step_2-2_search-after_submit.png")
         except Exception as e:
             logging.error(
                 f"Failed to type and submit search query '{query}': {e}")
@@ -124,8 +153,8 @@ class ExtendedSelenium(Selenium):
                 try:
                     self.click_element('css:.SearchFilter-heading')
                     logging.info("Category dropdown clicked")
-                    self.capture_page_screenshot(
-                        "output/process/screenshots/step_3-1_category-clicked.png")
+                    self.save_screenshot_to_work_item(
+                        filename="output/process/screenshots/step_3-1_category-clicked.png")
                 except Exception as e:
                     logging.error(f"Failed to click category: {e}")
                     return
@@ -141,8 +170,8 @@ class ExtendedSelenium(Selenium):
                     self.close_popup_if_present()
                     self.click_element(see_all_button)
                     logging.info('"See All" button clicked')
-                    self.capture_page_screenshot(
-                        "output/process/screenshots/step_3-2_see_all_clicked.png")
+                    self.save_screenshot_to_work_item(
+                        filename="output/process/screenshots/step_3-2_see_all_clicked.png")
                 except Exception as e:
                     logging.error(f"Failed to click 'See All': {e}")
                     return
@@ -161,8 +190,8 @@ class ExtendedSelenium(Selenium):
                 self.close_popup_if_present()
                 self.scroll_element_into_view('css:.SearchFilter-heading')
                 logging.info("Scrolled to dropdown")
-                self.capture_page_screenshot(
-                    f"output/process/screenshots/step_3-3_{category_name}_selected.png")
+                self.save_screenshot_to_work_item(
+                    filename=f"output/process/screenshots/step_3-3_{category_name}_selected.png")
             except Exception as e:
                 logging.error(f"Failed to select category: {e}")
         except Exception as e:
@@ -183,8 +212,8 @@ class ExtendedSelenium(Selenium):
             if "s=3" in current_url:
                 logging.info("Successfully sorted by 'Newest'")
                 self.close_popup_if_present()
-                self.capture_page_screenshot(
-                    "output/process/screenshots/step_4_sort_by_newest.png")
+                self.save_screenshot_to_work_item(
+                    filename="output/process/screenshots/step_4_sort_by_newest.png")
             else:
                 logging.warning(
                     "Failed to change sorting to 'Newest', refreshing the page...")
@@ -201,10 +230,11 @@ class ExtendedSelenium(Selenium):
         try:
             excel = Files()
             output_path = "output/process/data/news_data.xlsx"
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
             excel.create_workbook(output_path)
             excel.append_rows_to_worksheet([
                 ["Title", "Date", "Description", "Image Filename",
-                    "Search Phrases Count", "Contains Money"]
+                "Search Phrases Count", "Contains Money"]
             ], header=True)
 
             articles_container = self.get_webelement(
@@ -245,10 +275,8 @@ class ExtendedSelenium(Selenium):
                     img_filename = self.save_image_from_element(
                         img_element, title) if img_element else "N/A"
                 except Exception as e:
-
                     img_filename = "N/A"
-                    logging.warning(
-                        "Failed to extract image: there is no image.")
+                    logging.warning("Failed to extract image: there is no image.")
 
                 # Count occurrences of search phrases
                 search_phrases_count = self.count_search_phrases(
@@ -274,9 +302,13 @@ class ExtendedSelenium(Selenium):
             excel.close_workbook()
             logging.info(f"Data extracted and stored in {output_path}")
 
+            # Add the Excel file to the work item
+            self.work_item.add_work_item_file(path=output_path)
+            self.work_item.save_work_item()
+            logging.info(f"Excel file added to work item: {output_path}")
+
         except Exception as e:
-            logging.error(
-                f"Failed to extract news data and store in Excel: {e}")
+            logging.error(f"Failed to extract news data and store in Excel: {e}")
 
     def save_image_from_element(self, img_element, title):
         try:
