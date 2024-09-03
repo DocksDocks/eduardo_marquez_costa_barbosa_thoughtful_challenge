@@ -62,7 +62,7 @@ class ExtendedSelenium(Selenium):
     @keyword
     def open_site(self, url):
         logging.info(f"Opening url= {url}")
-        self.open_chrome_browser(url=url)
+        self.open_chrome_browser(url=url, headless=True)
         # self.create_webdriver(driver_name="Chrome",
         #                       service=self.service, options=self.options)
         # self.driver.get(url)
