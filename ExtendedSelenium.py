@@ -313,14 +313,15 @@ class ExtendedSelenium(Selenium):
 
             articles_container = self.get_webelement(
                 'css:.SearchResultsModule-results .PageList-items')
+            self.wait_until_element_is_visible(articles_container)
             articles = articles_container.find_elements(
                 "css selector", ".PageList-items-item")
-
+            self.wait_until_element_is_visible(articles)
             data = []
             for i, article in enumerate(articles):
+                self.wait_until_element_is_visible(article, timeout=10)
                 self.scroll_element_into_view(article)
                 # Explicit wait for the element to be interactable
-                self.wait_until_element_is_interactable(article, timeout=10)
 
                 title, description, date, img_filename = "N/A", "N/A", "N/A", "N/A"
                 try:
@@ -368,8 +369,7 @@ class ExtendedSelenium(Selenium):
                 if i < len(articles) - 1:
                     next_article = articles[i + 1]
                     self.scroll_element_into_view(next_article)
-                    self.wait_until_element_is_interactable(next_article, timeout=10)
-
+                    self.wait_until_element_is_visible(next_article, timeout=10)
             # Write data to the Excel sheet
             excel.append_rows_to_worksheet(data, header=False)
             excel.save_workbook(output_path)
