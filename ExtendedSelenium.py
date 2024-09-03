@@ -273,8 +273,7 @@ class ExtendedSelenium(Selenium):
                     img_filename = self.save_image_from_element(
                         img_element, title) if img_element else "N/A"
                 except Exception as e:
-                    img_filename = "N/A"
-                    logging.warning("Failed to extract image: there is no image.")
+                    img_filename = "N/A" # there is no image
 
                 # Count occurrences of search phrases
                 search_phrases_count = self.count_search_phrases(
@@ -312,7 +311,7 @@ class ExtendedSelenium(Selenium):
         try:
             # Limit the filename to 50 characters
             filename = f"{title[:50]}.png"
-            filepath = os.path.join("output/images", filename)
+            filepath = os.path.join("output", filename)
             os.makedirs(os.path.dirname(filepath), exist_ok=True)
             img_element.screenshot(filepath)
             # Add the image file to the work item
