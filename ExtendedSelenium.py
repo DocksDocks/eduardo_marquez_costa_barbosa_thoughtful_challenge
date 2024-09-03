@@ -22,7 +22,7 @@ class ExtendedSelenium(Selenium):
 
     def save_screenshot_to_work_item(self, filename):
         try:
-            self.screenshot(filename)
+            self.screenshot(filename=filename)
             self.work_item.add_work_item_file(path=filename)
             self.work_item.save_work_item()
             logging.info(f"Screenshot saved and added to work item: {filename}")
@@ -60,15 +60,15 @@ class ExtendedSelenium(Selenium):
             logging.warning(f"Failed to accept cookies: {e}")
 
     @keyword
-    def open_site(self, url, wait_time=10):
+    def open_site(self, url):
         logging.info(f"Opening url= {url}")
-        self.open_chrome_browser(url)
-        time.sleep(wait_time)  # Wait to ensure any initial popups appear
-        self.create_webdriver(driver_name="Chrome",
-                              service=self.service, options=self.options)
-        self.driver.get(url)
+        self.open_chrome_browser(url=url)
+        # self.create_webdriver(driver_name="Chrome",
+        #                       service=self.service, options=self.options)
+        # self.driver.get(url)
+        self.go_to(url=url)
         # Capture the screenshot here
-        self.save_screenshot_to_work_item(filename="output/screenshots/step_0-1_opened_site.png")
+        self.save_screenshot_to_work_item(filename="output/step_0-1_opened_site.png")
         time.sleep(2)  # Short wait for the page to load
 
     @keyword
@@ -104,7 +104,7 @@ class ExtendedSelenium(Selenium):
             time.sleep(5)  # Wait for the page to load
             self.close_popup_if_present()
             self.save_screenshot_to_work_item(
-                filename="output/screenshots/step_1-1_search-pre_click_search_button.png")
+                filename="output/step_1-1_search-pre_click_search_button.png")
             logging.debug("Trying to find search button...")
             self.wait_until_element_is_visible(
                 'css:.SearchOverlay-search-button', timeout=20)
@@ -116,7 +116,7 @@ class ExtendedSelenium(Selenium):
         finally:
             self.close_popup_if_present()
             self.save_screenshot_to_work_item(
-                filename="output/process/screenshots/step_1-2_search-click_button.png")
+                filename="output/step_1-2_search-click_button.png")
 
     @keyword
     def type_and_submit_search_query(self, query):
@@ -127,13 +127,13 @@ class ExtendedSelenium(Selenium):
             self.input_text('css:input.SearchOverlay-search-input', query)
             logging.info(f"Typed '{query}' into the search input.")
             self.save_screenshot_to_work_item(
-                filename="output/process/screenshots/step_2-1_search-typed_query.png")
+                filename="output/step_2-1_search-typed_query.png")
             self.press_keys('css:input.SearchOverlay-search-input', 'ENTER')
             logging.info(f"Submitted '{query}' to the search input.")
             self.wait_until_element_is_visible(
                 'css:.SearchResultsModule', timeout=10)
             self.save_screenshot_to_work_item(
-                filename="output/process/screenshots/step_2-2_search-after_submit.png")
+                filename="output/step_2-2_search-after_submit.png")
         except Exception as e:
             logging.error(
                 f"Failed to type and submit search query '{query}': {e}")
@@ -145,7 +145,6 @@ class ExtendedSelenium(Selenium):
             self.wait_until_element_is_visible(
                 'css:.SearchFilter-heading', timeout=10)
             self.scroll_element_into_view('css:.SearchFilter-heading')
-            # Dropdown is not open
             if not self.is_element_visible('css:bsp-toggler[data-toggle-in="search-filter"]'):
                 logging.info("Dropdown is already open, skipping it.")
             else:
@@ -154,12 +153,11 @@ class ExtendedSelenium(Selenium):
                     self.click_element('css:.SearchFilter-heading')
                     logging.info("Category dropdown clicked")
                     self.save_screenshot_to_work_item(
-                        filename="output/process/screenshots/step_3-1_category-clicked.png")
+                        filename="output/step_3-1_category-clicked.png")
                 except Exception as e:
                     logging.error(f"Failed to click category: {e}")
                     return
             # Step 3-2: Click "See All" if it hasn't been clicked already
-            # See All is not clicked
             if not self.is_element_visible('css:bsp-toggler[data-toggle-in="see-all"]'):
                 try:
                     self.wait_until_element_is_visible(
@@ -171,7 +169,7 @@ class ExtendedSelenium(Selenium):
                     self.click_element(see_all_button)
                     logging.info('"See All" button clicked')
                     self.save_screenshot_to_work_item(
-                        filename="output/process/screenshots/step_3-2_see_all_clicked.png")
+                        filename="output/step_3-2_see_all_clicked.png")
                 except Exception as e:
                     logging.error(f"Failed to click 'See All': {e}")
                     return
@@ -191,7 +189,7 @@ class ExtendedSelenium(Selenium):
                 self.scroll_element_into_view('css:.SearchFilter-heading')
                 logging.info("Scrolled to dropdown")
                 self.save_screenshot_to_work_item(
-                    filename=f"output/process/screenshots/step_3-3_{category_name}_selected.png")
+                    filename=f"output/step_3-3_{category_name}_selected.png")
             except Exception as e:
                 logging.error(f"Failed to select category: {e}")
         except Exception as e:
@@ -213,7 +211,7 @@ class ExtendedSelenium(Selenium):
                 logging.info("Successfully sorted by 'Newest'")
                 self.close_popup_if_present()
                 self.save_screenshot_to_work_item(
-                    filename="output/process/screenshots/step_4_sort_by_newest.png")
+                    filename="output/step_4_sort_by_newest.png")
             else:
                 logging.warning(
                     "Failed to change sorting to 'Newest', refreshing the page...")
@@ -229,7 +227,7 @@ class ExtendedSelenium(Selenium):
     def extract_news_data_and_store(self):
         try:
             excel = Files()
-            output_path = "output/process/data/news_data.xlsx"
+            output_path = "output/news_data.xlsx"
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
             excel.create_workbook(output_path)
             excel.append_rows_to_worksheet([
@@ -314,9 +312,13 @@ class ExtendedSelenium(Selenium):
         try:
             # Limit the filename to 50 characters
             filename = f"{title[:50]}.png"
-            filepath = os.path.join("output/process/data/images", filename)
+            filepath = os.path.join("output/images", filename)
             os.makedirs(os.path.dirname(filepath), exist_ok=True)
             img_element.screenshot(filepath)
+            # Add the image file to the work item
+            self.work_item.add_work_item_file(path=filepath)
+            self.work_item.save_work_item()
+            logging.info(f"Image saved and added to work item: {filepath}")
             return filename
         except Exception as e:
             logging.error(f"Failed to save image: {e}")
